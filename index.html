@@ -1,0 +1,132 @@
+<!-- Copyright (c) <2026> <Xtareo>
+Licensed under the MIT License. See LICENSE file for details -->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xtareo's blog</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Markdown 解析库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+    </script>
+</head>
+<body>
+    <!-- 背景图层 -->
+    <div class="bg-layer" id="bgLayer"></div>
+
+    <!-- 主容器 -->
+    <div class="app-container" id="appContainer">
+        <!-- ==================== 桌面端侧边栏 ==================== -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-inner">
+                <!-- 头像区域 -->
+                <div class="sidebar-avatar-wrap">
+                    <div class="avatar-ring">
+                        <img
+                        class="avatar-img"
+                        id="sidebarAvatar"
+                        src=""
+                        alt="头像"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                        />
+                        <div class="avatar-placeholder" style="display:none;">
+                            <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2c0 .66.54 1.2 1.2 1.2h16.8c.66 0 1.2-.54 1.2-1.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 名称 -->
+                <h2 class="sidebar-name" id="sidebarName">博主名称</h2>
+
+                <!-- 个人介绍 -->
+                <p class="sidebar-bio" id="sidebarBio">这里是个人介绍，简短描述自己。</p>
+
+                <!-- 社交链接 - 横向小图标 -->
+                <div class="sidebar-links" id="sidebarLinks">
+                    <!-- 动态生成 -->
+                </div>
+
+                <!-- 底部信息 -->
+                <div class="sidebar-footer">
+                    <div class="sidebar-runtime" id="sidebarRuntime">加载中...</div>
+                    <div class="sidebar-copyright" id="sidebarCopyright">© 2024</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ==================== 主内容区域 ==================== -->
+        <main class="main-content" id="mainContent">
+            <!-- 移动端顶部头像（仅移动端显示） -->
+            <div class="mobile-header" id="mobileHeader">
+                <div class="mobile-avatar-wrap">
+                    <img
+                    class="mobile-avatar-img"
+                    id="mobileAvatar"
+                    src=""
+                    alt="头像"
+                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                    />
+                    <div class="avatar-placeholder mobile-placeholder" style="display:none;">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2c0 .66.54 1.2 1.2 1.2h16.8c.66 0 1.2-.54 1.2-1.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                    </div>
+                </div>
+                <span class="mobile-name" id="mobileName">博主名称</span>
+            </div>
+
+            <!-- 工具栏 -->
+            <div class="toolbar" id="toolbar">
+                <button class="btn-back" id="btnBack" title="返回文章列表" style="display:none;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    <span>返回</span>
+                </button>
+                <span class="toolbar-title" id="toolbarTitle">文章列表</span>
+                <div class="layout-toggle" id="layoutToggle">
+                    <button class="layout-btn active" data-layout="list" title="列表排列">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="3" y="4" width="18" height="2" rx="1"/><rect x="3" y="11" width="18" height="2" rx="1"/><rect x="3" y="18" width="18" height="2" rx="1"/></svg>
+                    </button>
+                    <button class="layout-btn" data-layout="grid" title="块排列">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 文章列表 / 文章详情 -->
+            <div class="content-area" id="contentArea">
+                <!-- 文章列表视图 -->
+                <div class="article-list" id="articleList">
+                    <!-- 动态生成文章卡片 -->
+                </div>
+
+                <!-- 文章详情视图 -->
+                <article class="article-detail" id="articleDetail" style="display:none;">
+                    <!-- 动态填充 -->
+                </article>
+
+                <!-- 空状态 -->
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1" opacity="0.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <p>还没有文章，快去写一篇吧~</p>
+                </div>
+
+                <!-- 加载状态 -->
+                <div class="loading-state" id="loadingState">
+                    <div class="spinner"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+
+            <!-- 移动端底部信息（仅移动端显示） -->
+            <div class="mobile-footer" id="mobileFooter">
+                <div class="mobile-runtime" id="mobileRuntime">加载中...</div>
+                <div class="mobile-copyright" id="mobileCopyright">© 2024</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
