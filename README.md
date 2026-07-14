@@ -300,6 +300,18 @@ A：更新 `app.py` 中的 `PASSWORD_HASH`，重启服务：`sudo systemctl rest
 **Q：文章修改后静态页面未更新？**  
 A：前端完全静态，需手动刷新浏览器；也可设置 Nginx 缓存策略，但建议开发时禁用缓存。
 
+**Q：1MB以上大小的图片上传失败？**
+A；由于Flask 默认限制为 16MB（app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024），
+同时，Nginx 也有默认 1MB 的上传限制，即使 Flask 放宽了限制，Nginx 也会拦截大文件。
+增加 Flask 限制（例如改为 50MB）：
+```python
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+```
+修改 Nginx 配置，在 server 块或 location /manage/ 中添加：
+```python
+client_max_body_size 50m;
+```
+然后重载 Nginx和重启 Flask
 ---
 
 ## 📄 许可
