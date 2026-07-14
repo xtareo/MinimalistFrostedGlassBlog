@@ -18,7 +18,8 @@
 
 ### 后台（管理编辑器）
 - **安全登录** – 单用户认证，密码使用 Werkzeug 哈希存储，CSRF 防护，会话管理  
-- **文件管理** – 左侧列出所有 `.md` 文件和 `list.json`，支持新建、编辑、保存、删除（`list.json` 禁止删除）  
+- **文件管理** – 左侧列出所有 `.md` 文件和 `list.json`，支持新建、编辑、保存、删除（`list.json` 禁止删除）
+- **图片管理** - 通过这个轻松管理博客图片，来方便文章插入图片，支持上传、删除、新建图片文件夹、复制图片所在根目录路径
 - **实时预览** – 编辑 Markdown 时使用 `marked` + `highlight.js` 渲染，支持 GFM 表格和代码高亮；编辑 `list.json` 时预览格式化 JSON  
 - **路径安全** – 严格的路径规范化与 `secure_filename` 过滤，防止目录遍历攻击，仅允许操作 `articles` 目录  
 - **无缝集成** – 与 Nginx 静态博客共用同一域名，仅需增加一个 `location /manage/` 反向代理
@@ -39,7 +40,7 @@ your-blog/
 │   ├── hello-world.md
 │   └── ...
 ├── images/
-│   ├── avatar.jpg                #头像 背景 网站图标等
+│   ├── avatar.jpg                #头像 背景 网站图标等图片
 │   └── bg.jpg
 ├── manage_app/                   # Flask 管理应用（独立子目录）
 │   ├── app.py                    # 主程序
@@ -123,11 +124,11 @@ your-blog/
    ```
    访问 `http://127.0.0.1:5000/manage/`，用户名固定为 `admin`，密码即你设定的强密码。
 
-5. **确保 `articles` 目录可读写**（若与前端目录一致，权限需放开）。
+5. **确保 `articles` 目录和`images`目录可读写**（若与前端目录一致，权限需放开）。
 
 ---
 
-## 🖊️ 文章管理后台使用指南
+## 🖊️ 文章管理和图片管理后台使用指南
 
 登录后，界面分为左侧文件列表和右侧编辑区域：
 
@@ -137,7 +138,11 @@ your-blog/
 - **删除文章** – 点击文件名旁的 🗑️ 图标，确认后删除（物理删除 `.md` 文件）。  
 - **编辑 `list.json`** – 点击左侧 `list.json`，可在右侧直接编辑 JSON 内容，保存时自动校验格式合法性。  
 - **退出登录** – 点击侧边栏底部的“退出登录”。
-
+- **切换按钮(图片管理/文章列表)** - 点击按钮可以切换图片管理与文章列表界面。
+- **图片的上传** - 点击即可选择图片文件上传，默认支持png, jpg, jpeg, gif, webp, svg这几种图片类型。
+- **图片的新建文件夹** - 点击后输入文件夹名，文件夹命名默认只支持英文且不能有特殊符号与空格，通过这个可以对图片分类。
+- **图片的搜索框** - 点击输入图片名称即可对当前所在文件夹进行搜索展示。
+- **图片的删除与路径获取** - 点击图片左上方的🗑️图标即可删除该图片，点击右下方`复制路径`即可获取并复制该图片所在路径，方便文章插入图片时不用手输入路径。
 > **注意**：所有操作均同步到磁盘，修改后静态博客页面会自动刷新（需手动刷新浏览器查看新内容）。
 
 ---
@@ -162,10 +167,11 @@ server {
 
 - **将 `manage_app` 目录放在服务器合适位置**（例如 `/var/www/blog/manage_app`）。
 - 设置虚拟环境、安装依赖、配置 `PASSWORD_HASH`（同上）。
-- **设置文件权限**，确保 Flask 进程（通常 `www-data` 用户）可读写 `articles` 目录：
+- **设置文件权限**，确保 Flask 进程（通常 `www-data` 用户）可读写 `articles` 目录和`images`目录：
   ```bash
   sudo chown -R www-data:www-data /var/www/blog/articles
   sudo chmod -R 755 /var/www/blog/articles
+  sudo chown -R www-data:www-data /var/www/blog/images
   ```
 
 - **创建 Systemd 服务**（`/etc/systemd/system/blog-manage.service`）：
@@ -209,6 +215,14 @@ location /manage/ {
 
 location / {
     try_files $uri $uri/ =404;
+}
+```
+
+确保 Nginx 允许访问 /images/ 路径（在静态博客的 server 块中添加）**:
+```nginx
+location /images/ {
+    alias /var/www/blog/images/;
+    expires 30d;
 }
 ```
 
