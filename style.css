@@ -1,6 +1,5 @@
 /* Copyright (c) <2026> <Xtareo>
 Licensed under the MIT License. See LICENSE file for details */
-/* ==================== CSS 变量 & 全局重置 ==================== */
 :root {
     --glass-bg: rgba(255, 255, 255, 0.18);
     --glass-bg-strong: rgba(255, 255, 255, 0.35);
