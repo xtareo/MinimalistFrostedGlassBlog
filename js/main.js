@@ -296,6 +296,9 @@
                         <div class="markdown-body">${htmlContent}</div>
                     `;
 
+            // 👇 新增：为所有代码块添加语言标签
+            addCodeLanguageLabels();
+
             loadingState.style.display = 'none';
             articleDetail.style.display = 'block';
             contentArea.scrollTop = 0;
@@ -381,4 +384,43 @@
     } else {
         init();
     }
+    /**
+ * 为文章详情中所有 <pre> 代码块添加顶部语言标签
+ */
+function addCodeLanguageLabels() {
+    const markdownBody = articleDetail.querySelector('.markdown-body');
+    if (!markdownBody) return;
+
+    const pres = markdownBody.querySelectorAll('pre');
+    pres.forEach(pre => {
+        // 避免重复添加
+        if (pre.querySelector('.code-lang-label')) return;
+
+        const code = pre.querySelector('code');
+        let lang = '';
+
+        if (code && code.className) {
+            // 从 class="language-xxx" 中提取语言名称
+            const match = code.className.match(/language-(\w+)/);
+            if (match) {
+                lang = match[1];
+            }
+        }
+
+        // 如果没有语言信息，显示 "code"
+        if (!lang) lang = 'code';
+
+        // 创建标签元素
+        const label = document.createElement('span');
+        label.className = 'code-lang-label';
+        label.textContent = lang;
+
+        // 将 <pre> 包裹在容器中，并插入标签
+        const wrapper = document.createElement('div');
+        wrapper.className = 'code-block-wrapper';
+        pre.parentNode.insertBefore(wrapper, pre);
+        wrapper.appendChild(label);
+        wrapper.appendChild(pre);
+    });
+}
 })();
