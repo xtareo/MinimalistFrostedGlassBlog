@@ -1,11 +1,12 @@
 <!-- Copyright (c) <2026> <Xtareo>
 Licensed under the MIT License. See LICENSE file for details -->
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>文章管理</title>
+  <title>管理后台</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -24,175 +25,89 @@ Licensed under the MIT License. See LICENSE file for details -->
       font-family: 'Inter', sans-serif;
       background: var(--bg);
       color: var(--text);
-      display: flex;
       height: 100vh;
       overflow: hidden;
     }
-    /* 侧边栏 */
+
+    /* 视图容器 + 切换动画 */
+    .view-container { position: relative; width: 100%; height: 100%; }
+    .view {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      display: flex; transition: opacity 0.35s ease, transform 0.35s ease;
+      opacity: 0; pointer-events: none;
+    }
+    .view.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
+    .view.article-view { transform: translateX(-20px); }
+    .view.image-view { transform: translateX(20px); }
+    .view.active.article-view,
+    .view.active.image-view { transform: translateX(0); }
+
+    /* 文章管理布局 */
     .sidebar {
-      width: 280px;
-      background: var(--sidebar-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      box-shadow: var(--shadow);
-      z-index: 10;
+      width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; box-shadow: var(--shadow); z-index: 10;
     }
     .sidebar-header {
-      padding: 1.5rem;
-      border-bottom: 1px solid var(--border);
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: white;
+      padding: 1.5rem; border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .sidebar-header h2 {
-      font-size: 1.3rem;
-      font-weight: 600;
+    .sidebar-header h2 { font-size: 1.3rem; font-weight: 600; }
+    .switch-btn {
+      background: rgba(255,255,255,0.2); border: none; color: white;
+      padding: 0.35rem 0.75rem; border-radius: 8px; font-size: 0.8rem;
+      cursor: pointer; font-weight: 600; transition: background 0.2s;
     }
-    .file-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0.5rem;
-    }
+    .switch-btn:hover { background: rgba(255,255,255,0.35); }
+    .file-list { flex: 1; overflow-y: auto; padding: 0.5rem; }
     .file-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      margin-bottom: 0.25rem;
-      cursor: pointer;
-      transition: background 0.15s;
-      font-size: 0.95rem;
-      font-weight: 500;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 0.25rem;
+      cursor: pointer; transition: background 0.15s; font-size: 0.95rem; font-weight: 500;
     }
-    .file-item:hover {
-      background: #f1f5f9;
-    }
-    .file-item.active {
-      background: #ede9fe;
-      color: #4f46e5;
-    }
+    .file-item:hover { background: #f1f5f9; }
+    .file-item.active { background: #ede9fe; color: #4f46e5; }
     .file-item .delete-btn {
-      background: none;
-      border: none;
-      color: #94a3b8;
-      cursor: pointer;
-      font-size: 0.85rem;
-      padding: 0.25rem 0.5rem;
-      border-radius: 6px;
-      transition: all 0.2s;
+      background: none; border: none; color: #94a3b8;
+      cursor: pointer; font-size: 0.85rem; padding: 0.25rem 0.5rem;
+      border-radius: 6px; transition: all 0.2s;
     }
-    .file-item .delete-btn:hover {
-      background: #fee2e2;
-      color: var(--danger);
-    }
+    .file-item .delete-btn:hover { background: #fee2e2; color: var(--danger); }
     .new-file-form {
-      padding: 1rem;
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 0.5rem;
+      padding: 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem;
     }
     .new-file-form input {
-      flex: 1;
-      padding: 0.6rem 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 0.9rem;
+      flex: 1; padding: 0.6rem 0.75rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.9rem;
     }
     .new-file-form button {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 0.6rem 0.9rem;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
+      background: var(--primary); color: white; border: none;
+      padding: 0.6rem 0.9rem; border-radius: 8px; font-weight: 600; cursor: pointer;
     }
-    .new-file-form button:hover {
-      background: var(--primary-hover);
-    }
-    .logout-link {
-      padding: 0.75rem 1.5rem;
-      border-top: 1px solid var(--border);
-      text-align: center;
-    }
-    .logout-link a {
-      color: #64748b;
-      text-decoration: none;
-      font-size: 0.9rem;
-    }
-    .logout-link a:hover {
-      color: var(--text);
-    }
-    /* 主内容区 */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-width: 0;
-    }
-    .editor-container {
-      flex: 1;
-      display: flex;
-      min-height: 0;
-    }
-    .editor-pane, .preview-pane {
-      flex: 1;
-      overflow: auto;
-      padding: 1.5rem;
-    }
-    .editor-pane {
-      border-right: 1px solid var(--border);
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-    }
+    .new-file-form button:hover { background: var(--primary-hover); }
+    .logout-link { padding: 0.75rem 1.5rem; border-top: 1px solid var(--border); text-align: center; }
+    .logout-link a { color: #64748b; text-decoration: none; font-size: 0.9rem; }
+    .logout-link a:hover { color: var(--text); }
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .editor-container { flex: 1; display: flex; min-height: 0; }
+    .editor-pane, .preview-pane { flex: 1; overflow: auto; padding: 1.5rem; }
+    .editor-pane { border-right: 1px solid var(--border); background: #fff; display: flex; flex-direction: column; }
     .editor-pane textarea {
-      flex: 1;
-      border: none;
-      resize: none;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      padding: 1rem;
-      border-radius: 12px;
-      background: #f8fafc;
-      outline: none;
+      flex: 1; border: none; resize: none;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; line-height: 1.6;
+      padding: 1rem; border-radius: 12px; background: #f8fafc; outline: none;
     }
     .save-btn {
-      margin-top: 1rem;
-      align-self: flex-end;
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 0.7rem 1.8rem;
-      border-radius: 10px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
+      margin-top: 1rem; align-self: flex-end;
+      background: var(--primary); color: white; border: none;
+      padding: 0.7rem 1.8rem; border-radius: 10px; font-weight: 600; cursor: pointer;
     }
-    .save-btn:hover {
-      background: var(--primary-hover);
-    }
-    .preview-pane {
-      background: #ffffff;
-    }
-    /* ---------- 升级版 Markdown 预览样式 ---------- */
-    .preview-content {
-      line-height: 1.7;
-      color: #334155;
-    }
-    .preview-content h1,
-    .preview-content h2,
-    .preview-content h3,
-    .preview-content h4 {
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
-      font-weight: 600;
-      color: #1e293b;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 0.3em;
+    .save-btn:hover { background: var(--primary-hover); }
+    .preview-pane { background: #ffffff; }
+    .preview-content { line-height: 1.7; color: #334155; }
+    .preview-content h1, .preview-content h2, .preview-content h3 {
+      margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 600;
+      color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em;
     }
     .preview-content h1 { font-size: 1.8rem; }
     .preview-content h2 { font-size: 1.5rem; }
@@ -200,139 +115,267 @@ Licensed under the MIT License. See LICENSE file for details -->
     .preview-content p { margin: 0.8em 0; }
     .preview-content ul, .preview-content ol { padding-left: 1.5em; margin: 0.8em 0; }
     .preview-content li { margin: 0.3em 0; }
-
-    /* 行内代码 */
     .preview-content code:not(pre code) {
-      background: #ffe4e6;
-      color: #be123c;
-      padding: 0.2em 0.4em;
-      border-radius: 4px;
-      font-size: 0.9em;
-      font-family: 'JetBrains Mono', monospace;
+      background: #ffe4e6; color: #be123c; padding: 0.2em 0.4em;
+      border-radius: 4px; font-size: 0.9em; font-family: 'JetBrains Mono', monospace;
     }
-
-    /* 代码专用展示框 */
     .preview-content pre {
-      background: #1e293b;           /* 深色背景搭配 atom-one-dark 主题 */
-      border-radius: 12px;
-      margin: 1.2em 0;
-      padding: 0;
-      overflow-x: auto;
+      background: #1e293b; border-radius: 12px; margin: 1.2em 0; overflow-x: auto;
       box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      position: relative;
     }
     .preview-content pre code {
-      display: block;
-      padding: 1.2em 1.5em;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 0.9rem;
-      line-height: 1.6;
-      white-space: pre;               /* 保留缩进和换行 */
-      tab-size: 4;
-      color: #e2e8f0;
-      background: transparent;
+      display: block; padding: 1.2em 1.5em;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem;
+      line-height: 1.6; white-space: pre; tab-size: 4; color: #e2e8f0;
     }
-    /* 代码框顶部语言标签（模拟） */
     .preview-content pre::before {
       content: attr(data-lang);
-      display: block;
-      background: #0f172a;
-      color: #94a3b8;
-      font-size: 0.75rem;
-      padding: 0.4em 1.5em;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 500;
-    }
-    /* 如果 highlight.js 生成了 <code> 的 class，我们仍然保留原有样式 */
-    .preview-content pre code.hljs {
-      background: transparent;
-      padding: 1.2em 1.5em;
-    }
-    /* 行号效果（纯 CSS） */
-    .preview-content pre {
-      counter-reset: line;
-    }
-    .preview-content pre code {
-      counter-increment: line;
-    }
-    .preview-content pre code .line {
-      display: inline-block;
-      width: 100%;
-    }
-    .preview-content pre code .line::before {
-      counter-increment: line;
-      content: counter(line);
-      display: inline-block;
-      width: 2em;
-      margin-right: 1.5em;
-      color: #64748b;
-      text-align: right;
-      user-select: none;
+      display: block; background: #0f172a; color: #94a3b8;
+      font-size: 0.75rem; padding: 0.4em 1.5em;
+      border-top-left-radius: 12px; border-top-right-radius: 12px;
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;
     }
 
-    /* JSON 预览也使用相同样式（已继承） */
-    .preview-content pre code.json {
-      background: transparent;
+    /* 图片管理布局 */
+    .image-view { display: flex; flex-direction: column; background: var(--bg); }
+    .image-top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.5rem; background: white; border-bottom: 1px solid var(--border);
+    }
+    .image-title {
+      font-size: 1.4rem; font-weight: 600; display: flex; align-items: center; gap: 1rem;
+    }
+    .image-title .switch-btn {
+      background: var(--primary); color: white; padding: 0.4rem 1rem;
+      border-radius: 8px; font-size: 0.85rem;
+    }
+    .image-toolbar { display: flex; gap: 0.75rem; align-items: center; }
+    .image-toolbar input[type="text"] {
+      padding: 0.5rem 0.8rem; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.9rem; width: 200px;
+    }
+    .icon-btn {
+      background: var(--primary); color: white; border: none;
+      padding: 0.55rem 1.2rem; border-radius: 8px; font-weight: 600;
+      cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;
+    }
+    .icon-btn:hover { background: var(--primary-hover); }
+    .image-grid {
+      flex: 1; overflow-y: auto; padding: 1.5rem;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1.2rem; align-content: start;
+    }
+    .image-card {
+      background: white; border-radius: 12px; box-shadow: var(--shadow);
+      padding: 0.6rem; display: flex; flex-direction: column; align-items: center;
+      transition: transform 0.15s; position: relative;
+    }
+    .image-card:hover { transform: translateY(-2px); }
+    .image-card img {
+      width: 100%; height: 120px; object-fit: cover; border-radius: 8px; cursor: pointer;
+    }
+    .image-card .file-name {
+      font-size: 0.85rem; margin: 0.5rem 0; text-align: center;
+      word-break: break-all; max-width: 100%;
+    }
+    .copy-path-btn {
+      position: absolute; bottom: 0.5rem; right: 0.5rem;
+      background: rgba(0,0,0,0.6); color: white; border: none;
+      border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.7rem;
+      cursor: pointer; display: none;
+    }
+    .image-card:hover .copy-path-btn { display: block; }
+    .image-card .delete-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: rgba(220,38,38,0.8); color: white; border: none;
+      border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.7rem;
+      cursor: pointer; display: none;
+    }
+    .image-card:hover .delete-btn { display: block; }
+    .folder-card {
+      background: #f0f4ff; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 160px; border-radius: 12px; position: relative;
+    }
+    .folder-card .delete-btn {
+      position: absolute; top: 0.5rem; right: 0.5rem;
+      background: rgba(220,38,38,0.8); color: white; border: none;
+      border-radius: 6px; padding: 0.2rem 0.5rem; font-size: 0.7rem;
+      cursor: pointer; display: none;
+    }
+    .folder-card:hover .delete-btn { display: block; }
+    .folder-icon { font-size: 2.5rem; }
+    .folder-name { margin-top: 0.5rem; font-weight: 500; }
+
+    .breadcrumb {
+      padding: 0.5rem 1.5rem; background: white; border-bottom: 1px solid var(--border);
+      font-size: 0.9rem; color: #64748b;
+    }
+    .breadcrumb span { cursor: pointer; color: var(--primary); }
+    .breadcrumb span:hover { text-decoration: underline; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); display: none; align-items: center;
+      justify-content: center; z-index: 1000;
+    }
+    .modal-content { max-width: 90%; max-height: 90%; position: relative; }
+    .modal-content img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
+    .modal-close {
+      position: absolute; top: -2rem; right: -2rem;
+      background: white; color: black; border: none; border-radius: 50%;
+      width: 2rem; height: 2rem; cursor: pointer; font-weight: bold;
     }
 
     /* 消息提示 */
     .message {
+      position: fixed; bottom: 2rem; right: 2rem;
+      padding: 0.8rem 1.5rem; border-radius: 12px;
+      background: #1e293b; color: white; font-weight: 500;
+      opacity: 0; transform: translateY(10px); transition: all 0.3s;
+      pointer-events: none; z-index: 100;
+    }
+    .message.show { opacity: 1; transform: translateY(0); }
+
+    /* 上传进度浮动面板 */
+    .upload-progress-panel {
       position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      padding: 0.8rem 1.5rem;
-      border-radius: 12px;
-      background: #1e293b;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 360px;
+      max-height: 400px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       color: white;
-      font-weight: 500;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 100;
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .message.show {
-      opacity: 1;
-      transform: translateY(0);
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.8rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.15);
+      font-weight: 600;
     }
+    .progress-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 0.3rem;
+    }
+    .progress-close:hover { color: white; }
+    .progress-list {
+      padding: 0.8rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .progress-item {
+      margin-bottom: 1rem;
+    }
+    .progress-item .file-name {
+      font-size: 0.85rem;
+      margin-bottom: 0.3rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .progress-bar-bg {
+      background: rgba(255,255,255,0.15);
+      border-radius: 6px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      background: #4f46e5;
+      height: 100%;
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+    .progress-item.completed .progress-bar-fill { background: #22c55e; }
+    .progress-item.error .progress-bar-fill { background: #ef4444; }
   </style>
 </head>
 <body>
-  <!-- 侧边栏（保持不变） -->
-  <aside class="sidebar">
-    <div class="sidebar-header">
-      <h2>📁 文章列表</h2>
+  <div class="view-container">
+    <!-- ========== 文章管理视图 ========== -->
+    <div class="view article-view active" id="articleView">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h2>📁 文章列表</h2>
+          <button class="switch-btn" onclick="switchView('image')">🖼️ 图片管理</button>
+        </div>
+        <div class="file-list" id="fileList"></div>
+        <div class="new-file-form">
+          <input type="text" id="newFileName" placeholder="新文件名.md">
+          <button id="createBtn">新建</button>
+        </div>
+        <div class="logout-link">
+          <a href="{{ url_for('logout') }}">退出登录</a>
+        </div>
+      </aside>
+      <main class="main">
+        <div class="editor-container">
+          <div class="editor-pane">
+            <textarea id="markdownEditor" placeholder="选择一个文件开始编辑..."></textarea>
+            <button class="save-btn" id="saveMarkdownBtn">💾 保存文件</button>
+          </div>
+          <div class="preview-pane">
+            <div class="preview-content" id="markdownPreview"></div>
+          </div>
+        </div>
+      </main>
     </div>
-    <div class="file-list" id="fileList"></div>
-    <div class="new-file-form">
-      <input type="text" id="newFileName" placeholder="新文件名.md">
-      <button id="createBtn">新建</button>
-    </div>
-    <div class="logout-link">
-      <a href="{{ url_for('logout') }}">退出登录</a>
-    </div>
-  </aside>
 
-  <main class="main">
-    <div class="editor-container">
-      <div class="editor-pane">
-        <textarea id="markdownEditor" placeholder="选择一个文件开始编辑..."></textarea>
-        <button class="save-btn" id="saveMarkdownBtn">💾 保存文件</button>
+    <!-- ========== 图片管理视图 ========== -->
+    <div class="view image-view" id="imageView">
+      <div class="image-top-bar">
+        <div class="image-title">
+          🖼️ 图片管理
+          <button class="switch-btn" onclick="switchView('article')">📝 文章管理</button>
+        </div>
+        <div class="image-toolbar">
+          <input type="text" id="imgSearch" placeholder="搜索图片..." oninput="filterImages()">
+          <button class="icon-btn" onclick="document.getElementById('uploadInput').click()">⬆️ 上传</button>
+          <button class="icon-btn" onclick="createFolder()">📁 新建文件夹</button>
+          <input type="file" id="uploadInput" multiple accept="image/*" style="display:none" onchange="uploadImages(this.files)">
+        </div>
       </div>
-      <div class="preview-pane">
-        <div class="preview-content" id="markdownPreview"></div>
-      </div>
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div class="image-grid" id="imageGrid"></div>
     </div>
-  </main>
+  </div>
 
+  <!-- 模态框 -->
+  <div class="modal-overlay" id="imageModal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <img id="modalImage" src="">
+    </div>
+  </div>
+
+  <!-- 消息提示 -->
   <div class="message" id="message"></div>
+
+  <!-- 上传进度浮动面板 -->
+  <div class="upload-progress-panel" id="uploadProgressPanel">
+    <div class="progress-header">
+      <span>📤 上传进度</span>
+      <button class="progress-close" onclick="closeProgressPanel()">✕</button>
+    </div>
+    <div class="progress-list" id="progressList"></div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script>
+    // ========== 全局 ==========
     const csrfToken = '{{ csrf_token() }}';
 
     function showMessage(text, isError = false) {
@@ -349,7 +392,17 @@ Licensed under the MIT License. See LICENSE file for details -->
       return div.innerHTML;
     }
 
-    // 配置 marked
+    // ========== 视图切换 ==========
+    let currentView = 'article';
+    function switchView(target) {
+      if (target === currentView) return;
+      document.getElementById('articleView').classList.toggle('active', target === 'article');
+      document.getElementById('imageView').classList.toggle('active', target === 'image');
+      currentView = target;
+      if (target === 'image') loadImageDirectory();
+    }
+
+    // ========== 文章管理 ==========
     marked.setOptions({
       breaks: true,
       gfm: true,
@@ -435,7 +488,6 @@ Licensed under the MIT License. See LICENSE file for details -->
         }
       } else {
         previewDiv.innerHTML = marked.parse(content || '');
-        // 为代码块添加语言标识，便于 CSS 显示标题栏
         document.querySelectorAll('.preview-content pre code').forEach(block => {
           const langClass = block.className.match(/language-(\w+)/);
           if (langClass) {
@@ -448,15 +500,19 @@ Licensed under the MIT License. See LICENSE file for details -->
     }
 
     document.getElementById('saveMarkdownBtn').onclick = async () => {
-      if (!currentFile) return showMessage('请先选择一个文件', true);
+      if (!currentFile) {
+        showMessage('请先选择一个文件', true);
+        return;
+      }
       const content = document.getElementById('markdownEditor').value;
       const res = await fetch(`/manage/api/file/${encodeURIComponent(currentFile)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ content })
       });
-      if (res.ok) showMessage('文件已保存');
-      else {
+      if (res.ok) {
+        showMessage('文章已保存');
+      } else {
         const data = await res.json();
         showMessage(data.error || '保存失败', true);
       }
@@ -486,6 +542,221 @@ Licensed under the MIT License. See LICENSE file for details -->
       updatePreview(this.value, currentFileType);
     });
 
+    // ========== 图片管理 ==========
+    let currentImagePath = '';
+    let allImagesData = { folders: [], images: [] };
+
+    async function loadImageDirectory(path = '') {
+      try {
+        const res = await fetch(`/manage/api/images?path=${encodeURIComponent(path)}`);
+        if (!res.ok) throw new Error('加载失败');
+        const data = await res.json();
+        allImagesData = data;
+        currentImagePath = data.current || '';
+        renderBreadcrumb(currentImagePath);
+        renderImageGrid(data);
+      } catch (e) {
+        showMessage('图片目录加载失败', true);
+      }
+    }
+
+    function renderBreadcrumb(path) {
+      const parts = path.split('/').filter(Boolean);
+      let html = '<span onclick="loadImageDirectory(\'\')">根目录</span>';
+      let accumulated = '';
+      parts.forEach(part => {
+        accumulated += '/' + part;
+        html += ` / <span onclick="loadImageDirectory('${accumulated.substring(1)}')">${part}</span>`;
+      });
+      document.getElementById('breadcrumb').innerHTML = html;
+    }
+
+    function renderImageGrid(data) {
+      const grid = document.getElementById('imageGrid');
+      grid.innerHTML = '';
+      data.folders.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'image-card folder-card';
+        card.innerHTML = `
+          <div class="folder-icon">📁</div>
+          <div class="folder-name">${f.name}</div>
+          <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('${f.path}')">🗑️</button>
+        `;
+        card.onclick = () => loadImageDirectory(f.path);
+        grid.appendChild(card);
+      });
+      data.images.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        card.innerHTML = `
+          <img src="/images/${img.path}" alt="${img.name}" onclick="openModal('/images/${img.path}')">
+          <div class="file-name">${img.name}</div>
+          <button class="copy-path-btn" onclick="event.stopPropagation(); copyImagePath('${img.path}')">复制路径</button>
+          <button class="delete-btn" onclick="event.stopPropagation(); deleteImage('${img.path}')">🗑️</button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterImages() {
+      const term = document.getElementById('imgSearch').value.toLowerCase();
+      if (!term) {
+        renderImageGrid(allImagesData);
+        return;
+      }
+      const filteredFolders = allImagesData.folders.filter(f => f.name.toLowerCase().includes(term));
+      const filteredImages = allImagesData.images.filter(f => f.name.toLowerCase().includes(term));
+      renderImageGrid({ folders: filteredFolders, images: filteredImages });
+    }
+
+    function copyImagePath(relativePath) {
+      const fullPath = `/images/${relativePath}`;
+      navigator.clipboard.writeText(fullPath).then(() => {
+        showMessage('路径已复制: ' + fullPath);
+      }).catch(() => {
+        showMessage('复制失败，请手动复制', true);
+      });
+    }
+
+    async function deleteImage(relativePath) {
+      if (!confirm('确认删除？')) return;
+      const res = await fetch('/manage/api/images/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ paths: [relativePath] })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage('删除成功');
+        loadImageDirectory(currentImagePath);
+      } else {
+        showMessage(data.error || data.details?.[0] || '删除失败', true);
+      }
+    }
+
+    function createFolder() {
+      const name = prompt('输入文件夹名称:');
+      if (!name) return;
+      fetch('/manage/api/images/mkdir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ folder: currentImagePath, name })
+      }).then(async res => {
+        const data = await res.json();
+        if (data.success) {
+          showMessage('文件夹已创建');
+          loadImageDirectory(currentImagePath);
+        } else {
+          showMessage(data.error, true);
+        }
+      });
+    }
+
+    // ========== 带进度的上传 ==========
+    let uploadQueue = [];
+    let isUploading = false;
+
+    function uploadImages(files) {
+      if (!files.length) return;
+      for (let file of files) {
+        uploadQueue.push(file);
+      }
+      if (!isUploading) processUploadQueue();
+    }
+
+    async function processUploadQueue() {
+      if (uploadQueue.length === 0) {
+        isUploading = false;
+        setTimeout(() => {
+          if (uploadQueue.length === 0) closeProgressPanel();
+        }, 2000);
+        return;
+      }
+      isUploading = true;
+      document.getElementById('uploadProgressPanel').style.display = 'flex';
+      const file = uploadQueue.shift();
+      await uploadSingleFile(file);
+      processUploadQueue();
+    }
+
+    function uploadSingleFile(file) {
+      return new Promise((resolve) => {
+        const progressList = document.getElementById('progressList');
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'progress-item';
+        itemDiv.innerHTML = `
+          <div class="file-name">${file.name}</div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width:0%"></div>
+          </div>
+        `;
+        progressList.appendChild(itemDiv);
+
+        const xhr = new XMLHttpRequest();
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', currentImagePath);
+        formData.append('csrf_token', csrfToken);
+
+        xhr.open('POST', '/manage/api/images/upload');
+        xhr.setRequestHeader('X-CSRFToken', csrfToken);
+
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            itemDiv.querySelector('.progress-bar-fill').style.width = percent + '%';
+          }
+        });
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              if (data.success) {
+                itemDiv.classList.add('completed');
+                showMessage(`${file.name} 上传成功`);
+              } else {
+                itemDiv.classList.add('error');
+                showMessage(`${file.name} 上传失败: ${data.error}`, true);
+              }
+            } catch (e) {
+              itemDiv.classList.add('error');
+              showMessage(`${file.name} 响应异常`, true);
+            }
+          } else {
+            itemDiv.classList.add('error');
+            showMessage(`${file.name} 上传失败`, true);
+          }
+          resolve();
+        };
+
+        xhr.onerror = () => {
+          itemDiv.classList.add('error');
+          showMessage(`${file.name} 网络错误`, true);
+          resolve();
+        };
+
+        xhr.send(formData);
+      });
+    }
+
+    function closeProgressPanel() {
+      document.getElementById('uploadProgressPanel').style.display = 'none';
+      document.getElementById('progressList').innerHTML = '';
+      loadImageDirectory(currentImagePath);
+    }
+
+    // ========== 模态框（图片放大）==========
+    function openModal(src) {
+      document.getElementById('modalImage').src = src;
+      document.getElementById('imageModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('imageModal').style.display = 'none';
+    }
+
+    // ========== 初始化 ==========
     loadFileList();
   </script>
 </body>
