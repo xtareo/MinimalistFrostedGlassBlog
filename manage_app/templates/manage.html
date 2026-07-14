@@ -6,8 +6,7 @@ Licensed under the MIT License. See LICENSE file for details -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>文章管理</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -179,10 +178,106 @@ Licensed under the MIT License. See LICENSE file for details -->
     .preview-pane {
       background: #ffffff;
     }
+    /* ---------- 升级版 Markdown 预览样式 ---------- */
     .preview-content {
       line-height: 1.7;
       color: #334155;
     }
+    .preview-content h1,
+    .preview-content h2,
+    .preview-content h3,
+    .preview-content h4 {
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+      color: #1e293b;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.3em;
+    }
+    .preview-content h1 { font-size: 1.8rem; }
+    .preview-content h2 { font-size: 1.5rem; }
+    .preview-content h3 { font-size: 1.25rem; border-bottom: none; }
+    .preview-content p { margin: 0.8em 0; }
+    .preview-content ul, .preview-content ol { padding-left: 1.5em; margin: 0.8em 0; }
+    .preview-content li { margin: 0.3em 0; }
+
+    /* 行内代码 */
+    .preview-content code:not(pre code) {
+      background: #ffe4e6;
+      color: #be123c;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 代码专用展示框 */
+    .preview-content pre {
+      background: #1e293b;           /* 深色背景搭配 atom-one-dark 主题 */
+      border-radius: 12px;
+      margin: 1.2em 0;
+      padding: 0;
+      overflow-x: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      position: relative;
+    }
+    .preview-content pre code {
+      display: block;
+      padding: 1.2em 1.5em;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      white-space: pre;               /* 保留缩进和换行 */
+      tab-size: 4;
+      color: #e2e8f0;
+      background: transparent;
+    }
+    /* 代码框顶部语言标签（模拟） */
+    .preview-content pre::before {
+      content: attr(data-lang);
+      display: block;
+      background: #0f172a;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      padding: 0.4em 1.5em;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+    /* 如果 highlight.js 生成了 <code> 的 class，我们仍然保留原有样式 */
+    .preview-content pre code.hljs {
+      background: transparent;
+      padding: 1.2em 1.5em;
+    }
+    /* 行号效果（纯 CSS） */
+    .preview-content pre {
+      counter-reset: line;
+    }
+    .preview-content pre code {
+      counter-increment: line;
+    }
+    .preview-content pre code .line {
+      display: inline-block;
+      width: 100%;
+    }
+    .preview-content pre code .line::before {
+      counter-increment: line;
+      content: counter(line);
+      display: inline-block;
+      width: 2em;
+      margin-right: 1.5em;
+      color: #64748b;
+      text-align: right;
+      user-select: none;
+    }
+
+    /* JSON 预览也使用相同样式（已继承） */
+    .preview-content pre code.json {
+      background: transparent;
+    }
+
     /* 消息提示 */
     .message {
       position: fixed;
@@ -206,7 +301,7 @@ Licensed under the MIT License. See LICENSE file for details -->
   </style>
 </head>
 <body>
-  <!-- 侧边栏 -->
+  <!-- 侧边栏（保持不变） -->
   <aside class="sidebar">
     <div class="sidebar-header">
       <h2>📁 文章列表</h2>
@@ -221,7 +316,6 @@ Licensed under the MIT License. See LICENSE file for details -->
     </div>
   </aside>
 
-  <!-- 主区域 -->
   <main class="main">
     <div class="editor-container">
       <div class="editor-pane">
@@ -236,14 +330,11 @@ Licensed under the MIT License. See LICENSE file for details -->
 
   <div class="message" id="message"></div>
 
-  <!-- 依赖库 -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <script>
-    // CSRF token
     const csrfToken = '{{ csrf_token() }}';
 
-    // 工具函数
     function showMessage(text, isError = false) {
       const msg = document.getElementById('message');
       msg.textContent = text;
@@ -258,7 +349,7 @@ Licensed under the MIT License. See LICENSE file for details -->
       return div.innerHTML;
     }
 
-    // 配置 marked 与 highlight.js
+    // 配置 marked
     marked.setOptions({
       breaks: true,
       gfm: true,
@@ -268,11 +359,9 @@ Licensed under the MIT License. See LICENSE file for details -->
       }
     });
 
-    // 全局状态
     let currentFile = null;
-    let currentFileType = 'md';   // 'md' 或 'json'
+    let currentFileType = 'md';
 
-    // 文件列表加载
     async function loadFileList() {
       const res = await fetch('/manage/api/files');
       const files = await res.json();
@@ -282,7 +371,6 @@ Licensed under the MIT License. See LICENSE file for details -->
         const div = document.createElement('div');
         div.className = 'file-item';
         div.dataset.filename = f;
-        // 图标与删除按钮
         const icon = f.endsWith('.json') ? '📋' : '📄';
         div.innerHTML = `<span>${icon} ${f}</span>`;
         if (f !== 'list.json') {
@@ -320,7 +408,6 @@ Licensed under the MIT License. See LICENSE file for details -->
       });
     }
 
-    // 选择文件并加载内容
     async function selectFile(filename) {
       currentFile = filename;
       currentFileType = filename.endsWith('.json') ? 'json' : 'md';
@@ -335,7 +422,6 @@ Licensed under the MIT License. See LICENSE file for details -->
       }
     }
 
-    // 更新预览
     function updatePreview(content, fileType) {
       const previewDiv = document.getElementById('markdownPreview');
       if (fileType === 'json') {
@@ -349,10 +435,18 @@ Licensed under the MIT License. See LICENSE file for details -->
         }
       } else {
         previewDiv.innerHTML = marked.parse(content || '');
+        // 为代码块添加语言标识，便于 CSS 显示标题栏
+        document.querySelectorAll('.preview-content pre code').forEach(block => {
+          const langClass = block.className.match(/language-(\w+)/);
+          if (langClass) {
+            block.parentElement.setAttribute('data-lang', langClass[1]);
+          } else {
+            block.parentElement.setAttribute('data-lang', 'code');
+          }
+        });
       }
     }
 
-    // 保存文件
     document.getElementById('saveMarkdownBtn').onclick = async () => {
       if (!currentFile) return showMessage('请先选择一个文件', true);
       const content = document.getElementById('markdownEditor').value;
@@ -368,7 +462,6 @@ Licensed under the MIT License. See LICENSE file for details -->
       }
     };
 
-    // 新建文件（仅 .md）
     document.getElementById('createBtn').onclick = async () => {
       const input = document.getElementById('newFileName');
       const name = input.value.trim();
@@ -389,12 +482,10 @@ Licensed under the MIT License. See LICENSE file for details -->
       }
     };
 
-    // 实时预览
     document.getElementById('markdownEditor').addEventListener('input', function() {
       updatePreview(this.value, currentFileType);
     });
 
-    // 初始化
     loadFileList();
   </script>
 </body>
