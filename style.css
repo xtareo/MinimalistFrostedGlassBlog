@@ -702,6 +702,42 @@ body {
     margin: 20px 0;
 }
 
+/* ==================== 代码块语言标签（左上角横跨顶部） ==================== */
+.code-block-wrapper {
+    position: relative;
+    margin: 12px 0;
+}
+
+.code-lang-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;              /* 横跨整个宽度 */
+    padding: 6px 16px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    border-top-left-radius: var(--radius-xs);
+    border-top-right-radius: var(--radius-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    z-index: 2;
+    pointer-events: none;
+    line-height: 1.4;
+}
+
+/* 微调代码块内边距，避免内容被标签遮挡 */
+.code-block-wrapper pre {
+    margin: 0;
+    border-radius: var(--radius-xs);
+    padding-top: 2.8em;    /* 根据标签高度调整 */
+    position: relative;
+}
+
 /* ==================== 状态提示 ==================== */
 .empty-state, .loading-state {
     display: flex;
