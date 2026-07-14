@@ -11,13 +11,17 @@ from werkzeug.utils import secure_filename
 
 # ---------- 配置 ----------
 ARTICLES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'articles')
+IMAGES_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'images')   # 新增图片目录
 USERNAME = "admin"
-PASSWORD_HASH = ""   # 务必修改为密码哈希 在python控制台里运行generate_password_hash("填你的密码")来获取哈希
+PASSWORD_HASH = ""   # 务必修改为你的密码哈希
+
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 app = Flask(__name__)
-app.url_map.strict_slashes = False          # 允许 /manage/ 和 /manage 均可访问
+app.url_map.strict_slashes = False
 app.secret_key = os.urandom(24).hex()
 app.config['WTF_CSRF_ENABLED'] = True
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制上传文件大小 16MB
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
@@ -42,11 +46,9 @@ def safe_article_path(filename):
     safe_name = secure_filename(filename)
     if not safe_name:
         return None
-    # 检查扩展名
     _, ext = os.path.splitext(safe_name)
     if ext not in ('.md', '.json'):
         return None
-    # 只允许特定的 .json 文件
     if ext == '.json' and safe_name != 'list.json':
         return None
     full_path = os.path.normpath(os.path.join(ARTICLES_DIR, safe_name))
@@ -64,7 +66,21 @@ def get_editable_files():
     except FileNotFoundError:
         return []
 
-# ---------- 路由 ----------
+def safe_image_path(relative_path):
+    """验证并返回图片目录下的绝对路径，防止路径遍历"""
+    # 规范化相对路径，去除首尾 /
+    clean = relative_path.strip('/')
+    if '..' in clean:
+        return None
+    full = os.path.normpath(os.path.join(IMAGES_DIR, clean))
+    if not full.startswith(os.path.normpath(IMAGES_DIR)):
+        return None
+    return full
+
+def allowed_image(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+# ---------- 文章管理路由（保持不变）----------
 @app.route('/manage/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -79,7 +95,7 @@ def login():
             flash('登录成功', 'success')
             return redirect(url_for('manage_page'))
         else:
-            error = 'Username or password incorrect'
+            error = '用户名或密码错误'
     return render_template('login.html', error=error)
 
 @app.route('/manage/logout')
@@ -92,10 +108,9 @@ def logout():
 @app.route('/manage')
 @login_required
 def manage_page():
-    files = get_editable_files()    # 现在使用新函数
+    files = get_editable_files()
     return render_template('manage.html', files=files)
 
-# ---------- API ----------
 @app.route('/manage/api/files')
 @login_required
 def api_files():
@@ -151,7 +166,6 @@ def api_create_file():
     raw_name = data['filename'].strip()
     if not raw_name:
         return jsonify({'error': '文件名不能为空'}), 400
-    # 只允许创建 .md 文件
     if not raw_name.endswith('.md'):
         raw_name += '.md'
     safe_name = secure_filename(raw_name)
@@ -169,6 +183,136 @@ def api_create_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ---------- 图片管理 API ----------
+@app.route('/manage/api/images')
+@login_required
+def api_list_images():
+    folder = request.args.get('path', '').strip('/')
+    target_dir = safe_image_path(folder)
+    if target_dir is None or not os.path.isdir(target_dir):
+        return jsonify({'error': '无效目录'}), 400
+
+    folders = []
+    images = []
+    try:
+        for entry in sorted(os.listdir(target_dir)):
+            if entry.startswith('.'):
+                continue
+            full_entry = os.path.join(target_dir, entry)
+            if os.path.isdir(full_entry):
+                folders.append({
+                    'name': entry,
+                    'path': os.path.join(folder, entry).replace('\\', '/')
+                })
+            else:
+                if allowed_image(entry):
+                    images.append({
+                        'name': entry,
+                        'path': os.path.join(folder, entry).replace('\\', '/')
+                    })
+    except OSError:
+        return jsonify({'error': '无法读取目录'}), 500
+
+    return jsonify({'folders': folders, 'images': images, 'current': folder})
+
+@app.route('/manage/api/images/upload', methods=['POST'])
+@login_required
+def api_upload_image():
+    folder = request.form.get('folder', '').strip('/')
+    target_dir = safe_image_path(folder)
+    if target_dir is None or not os.path.isdir(target_dir):
+        return jsonify({'error': '无效目录'}), 400
+
+    if 'file' not in request.files:
+        return jsonify({'error': '未选择文件'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': '文件名为空'}), 400
+    if not allowed_image(file.filename):
+        return jsonify({'error': '不支持的文件类型'}), 400
+
+    filename = secure_filename(file.filename)
+    # 如果文件已存在，自动重命名（加时间戳）
+    base, ext = os.path.splitext(filename)
+    dest_path = os.path.join(target_dir, filename)
+    counter = 0
+    while os.path.exists(dest_path):
+        counter += 1
+        filename = f"{base}_{counter}{ext}"
+        dest_path = os.path.join(target_dir, filename)
+    try:
+        file.save(dest_path)
+        relative = os.path.join(folder, filename).replace('\\', '/')
+        return jsonify({'success': True, 'filename': filename, 'path': relative})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/manage/api/images/mkdir', methods=['POST'])
+@login_required
+def api_create_image_folder():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': '请求数据无效'}), 400
+    parent = data.get('folder', '').strip('/')
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': '文件夹名称不能为空'}), 400
+    safe_name = secure_filename(name)
+    if safe_name != name:  # 如果被修改，说明包含非法字符
+        return jsonify({'error': '文件夹名称包含非法字符'}), 400
+
+    parent_dir = safe_image_path(parent)
+    if parent_dir is None or not os.path.isdir(parent_dir):
+        return jsonify({'error': '无效父目录'}), 400
+
+    new_dir = os.path.join(parent_dir, safe_name)
+    if os.path.exists(new_dir):
+        return jsonify({'error': '文件夹已存在'}), 409
+    try:
+        os.makedirs(new_dir, exist_ok=False)
+        return jsonify({'success': True, 'name': safe_name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/manage/api/images/delete', methods=['POST'])
+@login_required
+def api_delete_image():
+    data = request.get_json()
+    if not data or 'paths' not in data:
+        return jsonify({'error': '缺少路径参数'}), 400
+    paths = data['paths']  # 期望为数组
+    if not isinstance(paths, list):
+        paths = [paths]
+
+    errors = []
+    for p in paths:
+        clean = p.strip('/')
+        target = safe_image_path(clean)
+        if target is None:
+            errors.append(f'{p}: 非法路径')
+            continue
+        if not os.path.exists(target):
+            errors.append(f'{p}: 不存在')
+            continue
+        try:
+            if os.path.isfile(target):
+                os.remove(target)
+            elif os.path.isdir(target):
+                # 只允许删除空文件夹
+                if len(os.listdir(target)) == 0:
+                    os.rmdir(target)
+                else:
+                    errors.append(f'{p}: 文件夹不为空，无法删除')
+            else:
+                errors.append(f'{p}: 未知类型')
+        except Exception as e:
+            errors.append(f'{p}: {str(e)}')
+
+    if errors:
+        return jsonify({'error': '部分操作失败', 'details': errors}), 400
+    return jsonify({'success': True})
+
 if __name__ == '__main__':
     os.makedirs(ARTICLES_DIR, exist_ok=True)
+    os.makedirs(IMAGES_DIR, exist_ok=True)
     app.run(host='127.0.0.1', port=5000, debug=False)
