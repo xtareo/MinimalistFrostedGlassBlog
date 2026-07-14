@@ -218,7 +218,7 @@ location / {
 }
 ```
 
-确保 Nginx 允许访问 /images/ 路径（在静态博客的 server 块中添加）**:
+确保 Nginx 允许访问 /images/ 路径（在静态博客的 server 块中添加）:
 ```nginx
 location /images/ {
     alias /var/www/blog/images/;
