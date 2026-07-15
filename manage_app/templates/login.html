@@ -1,11 +1,12 @@
 <!-- Copyright (c) <2026> <Xtareo>
 Licensed under the MIT License. See LICENSE file for details -->
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>XXX的blog管理</title>
+  <title>XXX的博客管理</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -71,6 +72,27 @@ Licensed under the MIT License. See LICENSE file for details -->
       margin-bottom: 1.5rem;
       border: 1px solid #feb2b2;
     }
+    .captcha-group { margin-bottom: 1.5rem; }
+    .captcha-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .captcha-row img {
+      height: 45px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid #e2e8f0;
+    }
+    .captcha-row input {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      letter-spacing: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
     .btn {
       width: 100%;
       padding: 0.9rem;
@@ -91,28 +113,40 @@ Licensed under the MIT License. See LICENSE file for details -->
     .btn:active {
       transform: translateY(0);
     }
-    .csrf-hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="login-card">
-    <h2>📝 Blog Management</h2>
-    <p class="subtitle">Please log in to continue</p>
+    <h2>📝 博客管理</h2>
+    <p class="subtitle">请登录以继续</p>
     {% if error %}
     <div class="error-message">⚠️ {{ error }}</div>
     {% endif %}
     <form method="POST" action="{{ url_for('login') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
-        <label for="username">Uesr</label>
-        <input type="text" id="username" name="username" placeholder="Please enter the uesr" required autocomplete="username">
+        <label for="username">用户名</label>
+        <input type="text" id="username" name="username" placeholder="请输入用户名" required autocomplete="username">
       </div>
       <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" placeholder="Please enter the password" required autocomplete="current-password">
+        <label for="password">密码</label>
+        <input type="password" id="password" name="password" placeholder="请输入密码" required autocomplete="current-password">
       </div>
-      <button type="submit" class="btn">Login</button>
+      <div class="form-group captcha-group">
+        <label for="captcha">验证码</label>
+        <div class="captcha-row">
+          <img id="captchaImg" src="{{ url_for('captcha') }}" alt="验证码" onclick="refreshCaptcha()" title="点击刷新">
+          <input type="text" id="captcha" name="captcha" placeholder="请输入验证码" required autocomplete="off" maxlength="4">
+        </div>
+      </div>
+      <button type="submit" class="btn">登 录</button>
     </form>
   </div>
+  <script>
+    function refreshCaptcha() {
+      const img = document.getElementById('captchaImg');
+      img.src = '{{ url_for("captcha") }}?' + new Date().getTime();
+    }
+  </script>
 </body>
 </html>

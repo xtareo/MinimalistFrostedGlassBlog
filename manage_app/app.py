@@ -3,7 +3,13 @@
 
 import os
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+import io
+import random
+import string
+from flask import (
+    Flask, render_template, request, redirect, url_for, flash,
+    jsonify, session, make_response
+)
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,17 +17,17 @@ from werkzeug.utils import secure_filename
 
 # ---------- 配置 ----------
 ARTICLES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'articles')
-IMAGES_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'images')   # 新增图片目录
+IMAGES_DIR   = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'images')
 USERNAME = "admin"
-PASSWORD_HASH = ""   # 务必修改为你的密码哈希
+PASSWORD_HASH = "" #请填写你的登入密码哈希
 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
-app.secret_key = os.urandom(24).hex()
+app.secret_key = os.urandom(24).hex()   # 生产环境请改用固定强随机值
 app.config['WTF_CSRF_ENABLED'] = True
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制上传文件大小 16MB
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
@@ -42,7 +48,6 @@ def load_user(username):
 
 # ---------- 辅助函数 ----------
 def safe_article_path(filename):
-    """允许 .md 和 list.json，严格防路径遍历"""
     safe_name = secure_filename(filename)
     if not safe_name:
         return None
@@ -57,7 +62,6 @@ def safe_article_path(filename):
     return full_path
 
 def get_editable_files():
-    """返回可编辑的文件列表：所有 .md + list.json（如果存在）"""
     try:
         files = [f for f in os.listdir(ARTICLES_DIR) if f.endswith('.md')]
         if os.path.exists(os.path.join(ARTICLES_DIR, 'list.json')):
@@ -67,8 +71,6 @@ def get_editable_files():
         return []
 
 def safe_image_path(relative_path):
-    """验证并返回图片目录下的绝对路径，防止路径遍历"""
-    # 规范化相对路径，去除首尾 /
     clean = relative_path.strip('/')
     if '..' in clean:
         return None
@@ -80,22 +82,53 @@ def safe_image_path(relative_path):
 def allowed_image(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
-# ---------- 文章管理路由（保持不变）----------
+def generate_captcha_svg():
+    chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+    code = ''.join(random.choices(chars, k=4))
+    width, height = 120, 50
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+      <rect width="100%" height="100%" fill="#f9fafb" rx="8"/>
+      <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle"
+            font-family="monospace" font-size="28" font-weight="bold"
+            fill="#1e293b" transform="rotate({random.randint(-4,4)}, {width/2}, {height/2})"
+            letter-spacing="8">{code}</text>
+      {''.join(f'<line x1="{random.randint(0,width)}" y1="{random.randint(0,height)}" x2="{random.randint(0,width)}" y2="{random.randint(0,height)}" stroke="#cbd5e1" stroke-width="1"/>' for _ in range(3))}
+      {''.join(f'<circle cx="{random.randint(0,width)}" cy="{random.randint(0,height)}" r="{random.randint(1,2)}" fill="#94a3b8"/>' for _ in range(20))}
+    </svg>'''
+    return svg, code
+
+# ---------- 验证码路由 ----------
+@app.route('/manage/captcha')
+def captcha():
+    svg_data, answer = generate_captcha_svg()
+    session['captcha_answer'] = answer
+    response = make_response(svg_data)
+    response.headers['Content-Type'] = 'image/svg+xml'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    return response
+
+# ---------- 登录 ----------
 @app.route('/manage/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('manage_page'))
     error = None
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        if username == USERNAME and check_password_hash(PASSWORD_HASH, password):
-            user = User(username)
-            login_user(user)
-            flash('登录成功', 'success')
-            return redirect(url_for('manage_page'))
+        user_captcha = request.form.get('captcha', '').strip().upper()
+        server_captcha = session.get('captcha_answer', '').upper()
+        if not user_captcha or user_captcha != server_captcha:
+            error = '验证码错误'
         else:
-            error = '用户名或密码错误'
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+            if username == USERNAME and check_password_hash(PASSWORD_HASH, password):
+                user = User(username)
+                login_user(user)
+                flash('登录成功', 'success')
+                return redirect(url_for('manage_page'))
+            else:
+                error = '用户名或密码错误'
+        session.pop('captcha_answer', None)
     return render_template('login.html', error=error)
 
 @app.route('/manage/logout')
